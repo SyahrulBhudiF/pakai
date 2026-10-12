@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -190,6 +191,51 @@ func TestSetKey_DynamicProviderLimit(t *testing.T) {
 	}
 	if val != "4500.00" {
 		t.Fatalf("got %q, want %q", val, "4500.00")
+	}
+}
+
+func TestSetKey_DynamicProviderKey(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	invalidateConfig()
+
+	key := "sk-airo-" + strings.Repeat("y", 24)
+	if err := SetKey("provider.inferhub.key", key); err != nil {
+		t.Fatalf("SetKey returned error: %v", err)
+	}
+
+	invalidateConfig()
+	if got := GetProviderKey("inferhub"); got != key {
+		t.Fatalf("GetProviderKey returned %d chars, want the %d-char key that was set", len(got), len(key))
+	}
+}
+
+func TestMaskKey(t *testing.T) {
+	longKey := "sk-airo-" + strings.Repeat("x", 24)
+
+	tests := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{"empty", "", ""},
+		{"single char", "a", "********"},
+		{"prefix only", "sk-airo-", "********"},
+		{"hides one", "sk-airo-1", "********"},
+		{"hides three", "sk-airo-123", "********"},
+		{"hides four", "sk-airo-1234", "********"},
+		{"hides five", "sk-airo-12345", "********"},
+		{"hides six", "sk-airo-123456", "sk-air...3456"},
+		{"long key", longKey, "sk-air...xxxx"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MaskKey(tt.key)
+			if got != tt.want {
+				t.Fatalf("MaskKey(%d-char key) = %q, want %q", len(tt.key), got, tt.want)
+			}
+		})
 	}
 }
 

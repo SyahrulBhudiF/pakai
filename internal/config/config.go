@@ -30,6 +30,7 @@ type ProviderConfig struct {
 	Label   string   `toml:"label"`
 	Limit   *float64 `toml:"limit"`
 	Source  string   `toml:"source"`
+	Key     string   `toml:"key"`
 }
 
 type DisplayConfig struct {
@@ -182,6 +183,30 @@ func GetProviderSource(id string) string {
 		return p.Source
 	}
 	return ""
+}
+
+func GetProviderKey(id string) string {
+	if p, ok := Config().Provider[id]; ok {
+		return p.Key
+	}
+	return ""
+}
+
+// MaskKey returns a redacted form of an API key for display. A key short enough
+// that its prefix and suffix would overlap is hidden entirely.
+func MaskKey(key string) string {
+	const (
+		prefix    = 6
+		suffix    = 4
+		minHidden = 4
+	)
+	if key == "" {
+		return ""
+	}
+	if len(key) < prefix+suffix+minHidden {
+		return "********"
+	}
+	return key[:prefix] + "..." + key[len(key)-suffix:]
 }
 
 func GetSeparator() string {
@@ -525,6 +550,8 @@ func setDynamicProviderKey(key, value string) error {
 		p.Label = value
 	case "source":
 		p.Source = value
+	case "key":
+		p.Key = value
 	case "limit":
 		f, err := strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -569,6 +596,11 @@ func getDynamicProviderKey(key string) (string, error) {
 			return p.Source, nil
 		}
 		return "", nil
+	case "key":
+		if exists {
+			return p.Key, nil
+		}
+		return "", nil
 	case "limit":
 		if exists && p.Limit != nil {
 			return fmt.Sprintf("%.2f", *p.Limit), nil
@@ -588,7 +620,7 @@ func parseProviderKey(key string) (id, field string, ok bool) {
 		return "", "", false
 	}
 	switch parts[2] {
-	case "enabled", "label", "limit", "source":
+	case "enabled", "label", "limit", "source", "key":
 		return parts[1], parts[2], true
 	default:
 		return "", "", false

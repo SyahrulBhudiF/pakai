@@ -82,6 +82,8 @@ func tmuxProviderToken(u *schema.Usage) string {
 		return "󱢆"
 	case "opencode", "opencode-go":
 		return "󰘦"
+	case "inferhub":
+		return "󱂛"
 	}
 
 	label := u.Label

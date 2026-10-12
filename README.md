@@ -8,7 +8,7 @@ Unified AI subscription usage tracker. Surface Claude, OpenAI Codex, and OpenCod
 
 ## Features
 
-- **Multi-provider**: Claude (OAuth), OpenAI Codex (OAuth), OpenCode (local SQLite DB), OpenCode Go (web dashboard), Pi (local tokens)
+- **Multi-provider**: Claude (OAuth), OpenAI Codex (OAuth), OpenCode (local SQLite DB), OpenCode Go (web dashboard), Pi (local tokens), InferHub (account balance and spend)
 - **Per-window tracking**: 5-hour, weekly, monthly usage per provider
 - **OpenCode sub-providers**: auto-discovers all provider backends with per-sub cost estimation
 - **Multiple surfaces**: tmux, Waybar, KDE Plasma widget, DMS plugin, `pakai status`, `pakai dashboard` (TUI)
@@ -36,6 +36,7 @@ pakai setup
 | OpenCode (local) | `opencode` | 5h, weekly, monthly | [→ docs/providers/opencode.md](docs/providers/opencode.md) |
 | OpenCode Go | `opencode-go` | 5h, weekly, monthly | [→ docs/providers/opencode-go.md](docs/providers/opencode-go.md) |
 | Pi | `pi/<provider>` | Monthly (tokens) | [→ docs/providers/pi.md](docs/providers/pi.md) |
+| InferHub | `inferhub` | 30d spend, balance | [→ docs/providers/inferhub.md](docs/providers/inferhub.md) |
 
 Full index with prerequisites and screenshots: [docs/providers/](docs/providers/)
 

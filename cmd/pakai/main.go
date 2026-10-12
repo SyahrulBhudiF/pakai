@@ -21,6 +21,7 @@ import (
 	"github.com/dhanifudin/pakai/internal/providers"
 	claudeprov "github.com/dhanifudin/pakai/internal/providers/claude"
 	"github.com/dhanifudin/pakai/internal/providers/codex"
+	inferhubprovider "github.com/dhanifudin/pakai/internal/providers/inferhub"
 	"github.com/dhanifudin/pakai/internal/providers/mock"
 	opencodeprov "github.com/dhanifudin/pakai/internal/providers/opencode"
 	opencodegoprov "github.com/dhanifudin/pakai/internal/providers/opencodego"
@@ -135,6 +136,9 @@ func fetchDirect() ([]*schema.Usage, time.Time, error) {
 	}
 	if config.IsProviderEnabled("pi") && !mockedSet["pi"] {
 		provs = append(provs, piprovider.New())
+	}
+	if inferhubprovider.Enabled() && !mockedSet["inferhub"] {
+		provs = append(provs, inferhubprovider.New())
 	}
 
 	var usages []*schema.Usage
@@ -844,6 +848,9 @@ func newConfigListCmd() *cobra.Command {
 				if p.Limit != nil {
 					fmt.Printf("provider.%s.limit = %.2f\n", id, *p.Limit)
 				}
+				if p.Key != "" {
+					fmt.Printf("provider.%s.key = %s\n", id, config.MaskKey(p.Key))
+				}
 			}
 			return nil
 		},
@@ -1026,12 +1033,34 @@ func newProviderDebugCmd() *cobra.Command {
 					}
 				}
 
+			case "inferhub":
+				p := inferhubprovider.New()
+				fmt.Printf("Usage URL: %s\n", p.UsageURL())
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				u, err := p.Fetch(ctx)
+				if err != nil {
+					fmt.Printf("Fetch error: %v\n", err)
+				} else {
+					fmt.Printf("Status: %s\n", u.Status)
+					for _, w := range u.Windows {
+						if pct := w.Pct(); pct >= 0 {
+							fmt.Printf("  - %s: %.1f%%\n", w.Label, pct)
+						} else {
+							fmt.Printf("  - %s: %s\n", w.Label, w.FormatUsed())
+						}
+					}
+					if u.Error != "" {
+						fmt.Printf("Error: %s\n", u.Error)
+					}
+				}
+
 			default:
 				// Check if it's a mock
 				mp, err := mock.Load(id)
 				if err != nil {
 					fmt.Printf("Unknown provider: %s\n", id)
-					fmt.Println("Known providers: claude, opencode, opencode-go, openai")
+					fmt.Println("Known providers: claude, opencode, opencode-go, openai, pi, inferhub")
 					return nil
 				}
 

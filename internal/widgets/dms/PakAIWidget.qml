@@ -28,7 +28,8 @@ PluginComponent {
         { providerId: "openai", label: "Codex", defaultSource: "pi", sources: [{ value: "pi", label: "Pi" }, { value: "codex", label: "Codex CLI" }] },
         { providerId: "opencode-go", label: "OpenCode Go", defaultSource: "pi", sources: [{ value: "pi", label: "Pi" }, { value: "opencode", label: "OpenCode" }] },
         { providerId: "opencode", label: "OpenCode local", source: "Local SQLite usage" },
-        { providerId: "pi", label: "Pi sessions", source: "Local Pi session logs" }
+        { providerId: "pi", label: "Pi sessions", source: "Local Pi session logs" },
+        { providerId: "inferhub", label: "InferHub", source: "InferHub API key" }
     ]
     property real settledPopoutHeight: 170
 
@@ -212,6 +213,7 @@ PluginComponent {
         if (provider.provider === "pi/opencode") return "OpenCode Zen · Pi"
         if (provider.provider === "pi/kosyayuk") return "Kosyayuk · Pi"
         if (provider.provider === "opencode-go") return "OpenCode Go"
+        if (provider.provider === "inferhub") return "InferHub"
         return provider.provider.charAt(0).toUpperCase() + provider.provider.slice(1)
     }
 
