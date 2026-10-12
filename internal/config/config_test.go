@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -190,5 +191,84 @@ func TestSetKey_DynamicProviderLimit(t *testing.T) {
 	}
 	if val != "4500.00" {
 		t.Fatalf("got %q, want %q", val, "4500.00")
+	}
+}
+
+func TestSetKey_DynamicProviderKey(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	invalidateConfig()
+
+	key := "sk-airo-" + strings.Repeat("y", 24)
+	if err := SetKey("provider.inferhub.key", key); err != nil {
+		t.Fatalf("SetKey returned error: %v", err)
+	}
+
+	invalidateConfig()
+	if got := GetProviderKey("inferhub"); got != key {
+		t.Fatalf("GetProviderKey returned %d chars, want the %d-char key that was set", len(got), len(key))
+	}
+}
+
+func TestMaskKey(t *testing.T) {
+	longKey := "sk-airo-" + strings.Repeat("x", 24)
+
+	tests := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{"empty", "", ""},
+		{"single char", "a", "********"},
+		{"prefix only", "sk-airo-", "********"},
+		{"hides one", "sk-airo-1", "********"},
+		{"hides three", "sk-airo-123", "********"},
+		{"hides four", "sk-airo-1234", "********"},
+		{"hides five", "sk-airo-12345", "********"},
+		{"hides six", "sk-airo-123456", "sk-air...3456"},
+		{"long key", longKey, "sk-air...xxxx"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MaskKey(tt.key)
+			if got != tt.want {
+				t.Fatalf("MaskKey(%d-char key) = %q, want %q", len(tt.key), got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsProviderEnabled_SectionWithoutEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		id   string
+		toml string
+		want bool
+	}{
+		{"no section", "inferhub", "", true},
+		{"key only", "inferhub", "[provider.inferhub]\nkey = \"abc\"\n", true},
+		{"label only", "openai", "[provider.openai]\nlabel = \"x\"\n", true},
+		{"explicitly disabled", "inferhub", "[provider.inferhub]\nkey = \"abc\"\nenabled = false\n", false},
+		{"explicitly enabled", "inferhub", "[provider.inferhub]\nenabled = true\n", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("XDG_CONFIG_HOME", dir)
+
+			configDir := filepath.Join(dir, "pakai")
+			if err := os.MkdirAll(configDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(tt.toml), 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			if got := IsProviderEnabled(tt.id); got != tt.want {
+				t.Fatalf("IsProviderEnabled(%q) = %v, want %v", tt.id, got, tt.want)
+			}
+		})
 	}
 }

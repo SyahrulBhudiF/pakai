@@ -107,46 +107,62 @@ func (c *Client) Events(ctx context.Context, callback func([]*schema.Usage)) err
 	return scanner.Err()
 }
 
-// EnsureRunning ensures the daemon is running, spawning it if necessary.
-// Returns nil if the daemon is running (or started successfully).
-// Returns an error if the daemon failed to start within the timeout.
+// EnsureRunning ensures the daemon is running and has completed a first refresh,
+// spawning it if necessary. Returns nil once the daemon has usage data to report,
+// or if it is running with no providers to poll. Returns an error if the daemon
+// never becomes reachable within the timeout.
+//
+// /health answers as soon as the HTTP server is up, which is before the refresh
+// loop has produced its first snapshot. Readiness is therefore a non-empty
+// /status, not a live /health.
 func EnsureRunning(port int) error {
 	c := New(port)
-	if err := c.Health(); err == nil {
-		return nil
-	}
+	if err := c.Health(); err != nil {
+		// Check via TCP dial first
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
+		if err == nil {
+			conn.Close()
+		} else {
+			// Try to spawn the daemon as detached process
+			exe, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("failed to get executable: %w", err)
+			}
 
-	// Check via TCP dial first
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
-	if err == nil {
-		conn.Close()
-		return nil
-	}
-
-	// Try to spawn the daemon as detached process
-	exe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable: %w", err)
-	}
-
-	cmd := exec.Command(exe, "daemon", "start")
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start daemon: %w", err)
-	}
-
-	// Poll every 200ms up to 3 seconds for daemon to be ready
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		time.Sleep(200 * time.Millisecond)
-		if err := c.Health(); err == nil {
-			return nil
+			cmd := exec.Command(exe, "daemon", "start")
+			cmd.Stdout = io.Discard
+			cmd.Stderr = io.Discard
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+			if err := cmd.Start(); err != nil {
+				return fmt.Errorf("failed to start daemon: %w", err)
+			}
 		}
 	}
 
-	return fmt.Errorf("daemon failed to start within 3 seconds")
+	// Poll every 200ms up to 3 seconds for the first snapshot.
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		usages, statusErr := c.Status()
+		if statusErr == nil && len(usages) > 0 {
+			return nil
+		}
+
+		// A daemon whose provider list is empty never produces a snapshot, so
+		// waiting for one would only stall the caller.
+		health, healthErr := c.GetHealth()
+		if healthErr == nil && len(health.Providers) == 0 {
+			return nil
+		}
+
+		if !time.Now().Before(deadline) {
+			if healthErr == nil {
+				return nil
+			}
+			return fmt.Errorf("daemon failed to start within 3 seconds")
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 // PIDFilePath returns the path to the daemon PID file.

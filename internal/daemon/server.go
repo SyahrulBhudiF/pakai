@@ -20,6 +20,7 @@ import (
 	"github.com/dhanifudin/pakai/internal/providers"
 	"github.com/dhanifudin/pakai/internal/providers/claude"
 	"github.com/dhanifudin/pakai/internal/providers/codex"
+	inferhubprovider "github.com/dhanifudin/pakai/internal/providers/inferhub"
 	"github.com/dhanifudin/pakai/internal/providers/mock"
 	"github.com/dhanifudin/pakai/internal/providers/opencode"
 	"github.com/dhanifudin/pakai/internal/providers/opencodego"
@@ -132,6 +133,10 @@ func (s *Server) buildProviders() []providers.Provider {
 
 	if config.IsProviderEnabled("pi") && !mockedSet["pi"] {
 		provs = append(provs, piprovider.New())
+	}
+
+	if inferhubprovider.Enabled() && !mockedSet["inferhub"] {
+		provs = append(provs, inferhubprovider.New())
 	}
 	return filterHiddenProviders(provs)
 }
@@ -512,6 +517,7 @@ func (s *Server) handleWidgetConfig(w http.ResponseWriter, r *http.Request) {
 			"opencode":    config.IsProviderEnabled("opencode"),
 			"opencode-go": config.IsProviderEnabled("opencode-go"),
 			"pi":          config.IsProviderEnabled("pi"),
+			"inferhub":    config.IsProviderEnabled("inferhub"),
 		},
 		Sources: map[string]string{
 			"openai":      config.GetProviderSource("openai"),
