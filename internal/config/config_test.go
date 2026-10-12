@@ -192,3 +192,37 @@ func TestSetKey_DynamicProviderLimit(t *testing.T) {
 		t.Fatalf("got %q, want %q", val, "4500.00")
 	}
 }
+
+func TestIsProviderEnabled_SectionWithoutEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		id   string
+		toml string
+		want bool
+	}{
+		{"no section", "inferhub", "", true},
+		{"key only", "inferhub", "[provider.inferhub]\nkey = \"abc\"\n", true},
+		{"label only", "openai", "[provider.openai]\nlabel = \"x\"\n", true},
+		{"explicitly disabled", "inferhub", "[provider.inferhub]\nkey = \"abc\"\nenabled = false\n", false},
+		{"explicitly enabled", "inferhub", "[provider.inferhub]\nenabled = true\n", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("XDG_CONFIG_HOME", dir)
+
+			configDir := filepath.Join(dir, "pakai")
+			if err := os.MkdirAll(configDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(tt.toml), 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			if got := IsProviderEnabled(tt.id); got != tt.want {
+				t.Fatalf("IsProviderEnabled(%q) = %v, want %v", tt.id, got, tt.want)
+			}
+		})
+	}
+}

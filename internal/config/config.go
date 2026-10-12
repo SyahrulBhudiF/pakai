@@ -128,13 +128,24 @@ func readConfig() (*AppConfig, error) {
 		return &cfg, nil
 	}
 
-	if err := toml.Unmarshal(data, &cfg); err != nil {
+	md, err := toml.Decode(string(data), &cfg)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse config TOML: %w", err)
 	}
 
 	// Apply defaults for maps that are nil after unmarshal
 	if cfg.Provider == nil {
 		cfg.Provider = make(map[string]ProviderConfig)
+	}
+
+	// A provider section that omits `enabled` is enabled, matching a provider
+	// that has no section at all. Without this, a section written to hold only a
+	// key or label would read as Enabled: false and silently disable it.
+	for id, p := range cfg.Provider {
+		if !md.IsDefined("provider", id, "enabled") {
+			p.Enabled = true
+			cfg.Provider[id] = p
+		}
 	}
 
 	return &cfg, nil
