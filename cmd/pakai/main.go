@@ -71,10 +71,11 @@ func fetchUsages() ([]*schema.Usage, time.Time, error) {
 	port := config.GetDaemonPort()
 	c := client.New(port)
 
-	// Try daemon first
+	// Try daemon first. An empty status means the daemon has not finished its
+	// first refresh yet, which is not a usable answer.
 	if err := c.Health(); err == nil {
 		usages, err := c.Status()
-		if err == nil {
+		if err == nil && len(usages) > 0 {
 			// Find most recent refreshedAt
 			var refreshedAt time.Time
 			for _, u := range usages {
@@ -89,7 +90,7 @@ func fetchUsages() ([]*schema.Usage, time.Time, error) {
 	// Try to auto-spawn daemon
 	if err := client.EnsureRunning(port); err == nil {
 		usages, err := c.Status()
-		if err == nil {
+		if err == nil && len(usages) > 0 {
 			var refreshedAt time.Time
 			for _, u := range usages {
 				if u.RefreshedAt.After(refreshedAt) {
