@@ -188,3 +188,72 @@ func TestSetupHasInferhubSubcommand(t *testing.T) {
 	}
 	t.Fatal("setup should have an 'inferhub' subcommand")
 }
+
+func runGetCmd(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := newConfigGetCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	if err := cmd.RunE(cmd, args); err != nil {
+		t.Fatalf("get returned error: %v", err)
+	}
+	return buf.String()
+}
+
+func TestConfigGetSecretKeyMasksByDefault(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	const key = "sk-airo-abcdefghijklmnopqrstuvwx"
+	if err := config.SetKey("provider.inferhub.key", key); err != nil {
+		t.Fatal(err)
+	}
+
+	out := runGetCmd(t, "provider.inferhub.key")
+	if strings.Contains(out, key) {
+		t.Fatalf("config get leaked the key: %q", out)
+	}
+	if !strings.Contains(out, "sk-air...uvwx") {
+		t.Fatalf("config get = %q, want a masked key", out)
+	}
+}
+
+func TestConfigGetSecretKeyRawFlag(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	const key = "sk-airo-abcdefghijklmnopqrstuvwx"
+	if err := config.SetKey("provider.inferhub.key", key); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := newConfigGetCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	if err := cmd.Flags().Set("raw", "true"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.RunE(cmd, []string{"provider.inferhub.key"}); err != nil {
+		t.Fatalf("get returned error: %v", err)
+	}
+	if !strings.Contains(buf.String(), key) {
+		t.Fatalf("--raw should print the full key, got %q", buf.String())
+	}
+}
+
+func TestConfigGetNonSecretKeyUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	if err := config.SetKey("provider.inferhub.limit", "20"); err != nil {
+		t.Fatal(err)
+	}
+	if out := runGetCmd(t, "provider.inferhub.limit"); !strings.Contains(out, "20") {
+		t.Fatalf("config get = %q, want the raw value", out)
+	}
+	if out := runGetCmd(t, "display.separator"); !strings.Contains(out, "|") {
+		t.Fatalf("config get = %q, want the raw separator", out)
+	}
+}

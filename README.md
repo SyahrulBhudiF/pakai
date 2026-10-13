@@ -79,6 +79,9 @@ pakai config set daemon.poll_interval 30
 pakai setup inferhub
 pakai config set provider.inferhub.key
 
+# Read a secret back (masked; add --raw to print the full value)
+pakai config get provider.inferhub.key
+
 # View all current config
 pakai config list
 ```

@@ -33,6 +33,13 @@ pakai config set provider.inferhub.key sk-airo-...
 
 Either form stores the key, sets the config file to mode 600, and confirms with a masked value such as `sk-air...kT7O`. The key itself is never printed. Setting the key also enables the provider: InferHub is opt-in, so pakai polls it only when a key is configured and it never appears as an error tile for users who do not use it.
 
+Reading the key back is masked too, so it does not land in terminal scrollback:
+
+```bash
+pakai config get provider.inferhub.key          # provider.inferhub.key = sk-air...kT7O
+pakai config get provider.inferhub.key --raw    # prints the full key
+```
+
 ## Enable
 
 ```bash

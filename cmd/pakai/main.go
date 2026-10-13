@@ -888,20 +888,30 @@ func promptSecret(label string) (string, error) {
 }
 
 func newConfigGetCmd() *cobra.Command {
-	return &cobra.Command{
+	var raw bool
+
+	cmd := &cobra.Command{
 		Use:   "get <key>",
 		Short: "Get a configuration value",
-		Args:  cobra.ExactArgs(1),
+		Long: "Get a configuration value.\n\n" +
+			"A secret key such as provider.inferhub.key is masked by default.\n" +
+			"Pass --raw to print the full value.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			val, err := config.GetKey(key)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%s = %v\n", key, val)
+			if config.IsSecretKey(key) && !raw {
+				val = config.MaskKey(val)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s = %v\n", key, val)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&raw, "raw", false, "print the full value of a secret key instead of a masked one")
+	return cmd
 }
 
 func newConfigListCmd() *cobra.Command {
