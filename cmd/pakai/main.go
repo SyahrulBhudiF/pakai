@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
 	"github.com/dhanifudin/pakai/internal/client"
@@ -507,6 +508,7 @@ func newSetupCmd() *cobra.Command {
 		newSetupTmuxCmd(),
 		newSetupPlasmaCmd(),
 		newSetupDmsCmd(),
+		newSetupInferhubCmd(),
 	)
 
 	return setupCmd
@@ -779,6 +781,35 @@ func newSetupDmsCmd() *cobra.Command {
 	return cmd
 }
 
+func newSetupInferhubCmd() *cobra.Command {
+	const configKey = "provider.inferhub.key"
+
+	return &cobra.Command{
+		Use:   "inferhub",
+		Short: "Store an InferHub API key with hidden input",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			key, err := promptSecret("InferHub API key")
+			if err != nil {
+				return err
+			}
+
+			if err := config.SetKey(configKey, key); err != nil {
+				return err
+			}
+
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Stored %s = %s\n", configKey, config.MaskKey(key))
+			fmt.Fprintln(out, "")
+			fmt.Fprintln(out, "InferHub is enabled and will be polled by the daemon.")
+			fmt.Fprintln(out, "Optional: set a 30-day budget so the spend window shows a percentage:")
+			fmt.Fprintln(out, "  pakai config set provider.inferhub.limit 20")
+			fmt.Fprintln(out, "Restart the daemon to pick up the key:")
+			fmt.Fprintln(out, "  pakai daemon restart")
+			return nil
+		},
+	}
+}
+
 // -- config command --
 
 func newConfigCmd() *cobra.Command {
@@ -796,37 +827,91 @@ func newConfigCmd() *cobra.Command {
 
 func newConfigSetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "set <key> <value>",
+		Use:   "set <key> [value]",
 		Short: "Set a configuration value",
-		Args:  cobra.ExactArgs(2),
+		Long: "Set a configuration value.\n\n" +
+			"For a secret key such as provider.inferhub.key, omit the value to be\n" +
+			"prompted with hidden input. This keeps the secret out of the shell\n" +
+			"history and the process list.",
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
-			value := args[1]
+
+			var value string
+			switch {
+			case len(args) == 2:
+				value = args[1]
+			case config.IsSecretKey(key):
+				prompted, err := promptSecret(key)
+				if err != nil {
+					return err
+				}
+				value = prompted
+			default:
+				return fmt.Errorf("%s requires a value", key)
+			}
 
 			if err := config.SetKey(key, value); err != nil {
 				return err
 			}
-			fmt.Printf("Set %s = %s\n", key, value)
+
+			if config.IsSecretKey(key) {
+				value = config.MaskKey(value)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Set %s = %s\n", key, value)
 			return nil
 		},
 	}
 }
 
+// promptSecret reads a secret from the terminal with echo disabled. The prompt
+// goes to stderr so stdout stays clean for scripts, and the value never reaches
+// argv, the shell history, or the process list.
+func promptSecret(label string) (string, error) {
+	fd := os.Stdin.Fd()
+	if !term.IsTerminal(fd) {
+		return "", fmt.Errorf("cannot read %s without a terminal; pass the value as an argument instead", label)
+	}
+
+	fmt.Fprintf(os.Stderr, "%s (input hidden): ", label)
+	raw, err := term.ReadPassword(fd)
+	fmt.Fprintln(os.Stderr)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", label, err)
+	}
+
+	value := strings.TrimSpace(string(raw))
+	if value == "" {
+		return "", fmt.Errorf("no %s entered", label)
+	}
+	return value, nil
+}
+
 func newConfigGetCmd() *cobra.Command {
-	return &cobra.Command{
+	var raw bool
+
+	cmd := &cobra.Command{
 		Use:   "get <key>",
 		Short: "Get a configuration value",
-		Args:  cobra.ExactArgs(1),
+		Long: "Get a configuration value.\n\n" +
+			"A secret key such as provider.inferhub.key is masked by default.\n" +
+			"Pass --raw to print the full value.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 			val, err := config.GetKey(key)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%s = %v\n", key, val)
+			if config.IsSecretKey(key) && !raw {
+				val = config.MaskKey(val)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s = %v\n", key, val)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&raw, "raw", false, "print the full value of a secret key instead of a masked one")
+	return cmd
 }
 
 func newConfigListCmd() *cobra.Command {
