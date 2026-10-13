@@ -8,7 +8,7 @@ Unified AI subscription usage tracker. Surface Claude, OpenAI Codex, and OpenCod
 
 ## Features
 
-- **Multi-provider**: Claude (OAuth), OpenAI Codex (OAuth), OpenCode (local SQLite DB), OpenCode Go (web dashboard), Pi (local tokens)
+- **Multi-provider**: Claude (OAuth), OpenAI Codex (OAuth), OpenCode (local SQLite DB), OpenCode Go (web dashboard), Pi (local tokens), InferHub (account balance and spend)
 - **Per-window tracking**: 5-hour, weekly, monthly usage per provider
 - **OpenCode sub-providers**: auto-discovers all provider backends with per-sub cost estimation
 - **Multiple surfaces**: tmux, Waybar, KDE Plasma widget, DMS plugin, `pakai status`, `pakai dashboard` (TUI)
@@ -36,6 +36,7 @@ pakai setup
 | OpenCode (local) | `opencode` | 5h, weekly, monthly | [→ docs/providers/opencode.md](docs/providers/opencode.md) |
 | OpenCode Go | `opencode-go` | 5h, weekly, monthly | [→ docs/providers/opencode-go.md](docs/providers/opencode-go.md) |
 | Pi | `pi/<provider>` | Monthly (tokens) | [→ docs/providers/pi.md](docs/providers/pi.md) |
+| InferHub | `inferhub` | 30d spend, balance | [→ docs/providers/inferhub.md](docs/providers/inferhub.md) |
 
 Full index with prerequisites and screenshots: [docs/providers/](docs/providers/)
 
@@ -74,6 +75,13 @@ pakai config set thresholds.warning 50
 pakai config set thresholds.critical 80
 pakai config set daemon.poll_interval 30
 
+# Store a provider API key with hidden input (kept out of shell history)
+pakai setup inferhub
+pakai config set provider.inferhub.key
+
+# Read a secret back (masked; add --raw to print the full value)
+pakai config get provider.inferhub.key
+
 # View all current config
 pakai config list
 ```
@@ -94,6 +102,7 @@ Config file: `$XDG_CONFIG_HOME/pakai/config.toml`
 | `pakai setup waybar` | Print Waybar module config and CSS |
 | `pakai setup plasma [--install]` | Print KDE Plasma widget install steps (or perform them) |
 | `pakai setup dms [--install]` | Print DMS plugin install steps (or perform them) |
+| `pakai setup inferhub` | Store an InferHub API key with hidden input |
 | `pakai config set/get/list` | Manage configuration |
 | `pakai daemon start/stop/status` | Control background daemon |
 | `pakai provider debug <id>` | Inspect raw provider data |

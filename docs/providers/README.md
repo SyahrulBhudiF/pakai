@@ -9,6 +9,7 @@ pakai supports the following usage data sources. Each provider has its own page 
 | [OpenCode (local)](opencode.md) | `opencode` | `~/.local/share/opencode/*.db` SQLite | 5h, weekly, monthly | opencode.ai login |
 | [OpenCode Go](opencode-go.md) | `opencode-go` | OpenCode Usage API | 5h, weekly, monthly | Pi or OpenCode API key |
 | [Pi](pi.md) | `pi/<provider>` | `~/.pi/agent/sessions/**/*.jsonl` | Monthly (local tokens) | Use Pi |
+| [InferHub](inferhub.md) | `inferhub` | InferHub account usage API | 30d spend, balance | InferHub API key |
 
 ## Quick config reference
 

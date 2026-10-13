@@ -219,6 +219,8 @@ func providerIcon(provider string) string {
 		return "󱢆"
 	case "opencode", "opencode-go":
 		return "󰘦"
+	case "inferhub":
+		return "󱂛"
 	default:
 		return ""
 	}
