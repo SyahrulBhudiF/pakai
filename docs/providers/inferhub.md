@@ -4,7 +4,7 @@ Track your InferHub account balance and spend through the [account usage API](ht
 
 ## What it tracks
 
-InferHub is an OpenAI/Anthropic-compatible inference gateway. pakai reads your USDC balance and the spend over the last 30 days from the InferHub management API and shows two windows:
+InferHub is an [OI]/Anthropic-compatible inference gateway. pakai reads your USDC balance and the spend over the last 30 days from the InferHub management API and shows two windows:
 
 - `30d` — spend over the last 30 days
 - `bal` — your current USDC balance
@@ -17,16 +17,26 @@ The window rolls forward instead of resetting, so pakai does not show a reset co
 
 Create an inference key in the InferHub dashboard. It starts with `sk-airo-`.
 
+Store it with hidden input so the key never reaches your shell history or the process list:
+
+```bash
+pakai setup inferhub
+```
+
+`pakai config set provider.inferhub.key` with no value prompts the same way.
+
+To pass the key directly instead, which is convenient in a script but leaves it visible in the process list while the command runs:
+
 ```bash
 pakai config set provider.inferhub.key sk-airo-...
 ```
 
-Setting the key also enables the provider. InferHub is opt-in: pakai polls it only when a key is configured, so it never appears as an error tile for users who do not use it.
+Either form stores the key, sets the config file to mode 600, and confirms with a masked value such as `sk-air...kT7O`. The key itself is never printed. Setting the key also enables the provider: InferHub is opt-in, so pakai polls it only when a key is configured and it never appears as an error tile for users who do not use it.
 
 ## Enable
 
 ```bash
-pakai config set provider.inferhub.key sk-airo-...
+pakai setup inferhub
 pakai config set provider.inferhub.limit 20
 pakai daemon restart
 ```

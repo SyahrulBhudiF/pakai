@@ -627,6 +627,13 @@ func parseProviderKey(key string) (id, field string, ok bool) {
 	}
 }
 
+// IsSecretKey reports whether a config key holds a secret, so callers prompt for
+// it instead of taking it from the command line.
+func IsSecretKey(key string) bool {
+	_, field, ok := parseProviderKey(key)
+	return ok && field == "key"
+}
+
 func SetWidgetPinned(providerID string) error {
 	cfg, err := readConfig()
 	if err != nil {

@@ -75,6 +75,10 @@ pakai config set thresholds.warning 50
 pakai config set thresholds.critical 80
 pakai config set daemon.poll_interval 30
 
+# Store a provider API key with hidden input (kept out of shell history)
+pakai setup inferhub
+pakai config set provider.inferhub.key
+
 # View all current config
 pakai config list
 ```
@@ -95,6 +99,7 @@ Config file: `$XDG_CONFIG_HOME/pakai/config.toml`
 | `pakai setup waybar` | Print Waybar module config and CSS |
 | `pakai setup plasma [--install]` | Print KDE Plasma widget install steps (or perform them) |
 | `pakai setup dms [--install]` | Print DMS plugin install steps (or perform them) |
+| `pakai setup inferhub` | Store an InferHub API key with hidden input |
 | `pakai config set/get/list` | Manage configuration |
 | `pakai daemon start/stop/status` | Control background daemon |
 | `pakai provider debug <id>` | Inspect raw provider data |

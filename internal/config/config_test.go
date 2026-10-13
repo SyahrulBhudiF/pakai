@@ -272,3 +272,28 @@ func TestIsProviderEnabled_SectionWithoutEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSecretKey(t *testing.T) {
+	tests := []struct {
+		key  string
+		want bool
+	}{
+		{"provider.inferhub.key", true},
+		{"provider.other.key", true},
+		{"provider.inferhub.limit", false},
+		{"provider.inferhub.label", false},
+		{"provider.inferhub.enabled", false},
+		{"provider.inferhub.source", false},
+		{"daemon.port", false},
+		{"widget.pinned", false},
+		{"provider.inferhub", false},
+		{"provider..key", false},
+		{"provider.inferhub.key.extra", false},
+	}
+
+	for _, tt := range tests {
+		if got := IsSecretKey(tt.key); got != tt.want {
+			t.Errorf("IsSecretKey(%q) = %v, want %v", tt.key, got, tt.want)
+		}
+	}
+}

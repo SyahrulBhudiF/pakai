@@ -39,5 +39,11 @@ func WriteConfigAtomic(cfg *AppConfig) error {
 		return fmt.Errorf("failed to rename config: %w", err)
 	}
 
+	// The config can hold an API key, so keep it owner-only regardless of the
+	// temp file's mode or the process umask.
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("failed to set config permissions: %w", err)
+	}
+
 	return nil
 }
